@@ -1,0 +1,12 @@
+/LLM_Diagram_Coding - Published.code-workspace
+/main_gpt.py
+/Data/*
+!/Data/.gitkeep
+/ai_chat.py
+/Archive
+/Batch Input Files/*
+!/Batch Input Files/.gitkeep
+/Batch Response Files/*
+!/Batch Response Files/.gitkeep
+/documentation/*
+!/documentation/.gitkeep
