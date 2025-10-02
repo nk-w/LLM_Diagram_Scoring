@@ -89,7 +89,7 @@ Treat `r_analysis/` as a dedicated RStudio/Quarto subproject.
 
 ## Appendix
 
-- **Citation**: Wenzel, N. (2025). *LLM-Based Coding of Student Causal Diagrams*. Research dataset and code. https://github.com/niklaswenzel/LLM_Diagram_Coding
+- **Citation**: Wenzel, N. (2025). *LLM-Based Coding of Student Causal Diagrams*. Research dataset and code. https://github.com/nk-w/LLM_Diagram_Scoring 
 - **Contact**: niklas.wenzel@maastrichtuniversity.nl
 - **License**: MIT License (see `LICENSE`).
 - **Glossary**: `Extraction` – binary coding of correct concept identification; `Position` – relational accuracy among diagram elements; `Strategy` – prompt configuration (truth values/examples); `Model` – OpenAI model variant (e.g., `gpt-5`, `gpt-5-mini`).
