@@ -24,4 +24,4 @@ r_analysis/models/*
 !r_analysis/models/.gitkeep
 r_analysis/tables/*
 !r_analysis/tables/.gitkeep
-.DS_store
+.DS_Store
