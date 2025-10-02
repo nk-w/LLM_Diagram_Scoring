@@ -1,4 +1,6 @@
 import json
+import os
+import glob
 import pandas as pd
 
 """Defining Functions"""
@@ -48,9 +50,17 @@ def cost_calc(input, output, model):
             "input cost": 1.25,
             "output cost": 5
         },
-        "gpt-4o-mini-2024-07-18": {
-            "input cost": 0.075,
-            "output cost": 0.3
+        "o4-mini-2025-04-16": {
+            "input cost": 0.55,
+            "output cost": 2.2
+        },
+        "gpt-5": {
+            "input cost": 0.625,
+            "output cost": 5
+        },
+        "gpt-5-mini": {
+            "input cost": 0.125,
+            "output cost": 1
         }
     }
     
@@ -61,7 +71,7 @@ def cost_calc(input, output, model):
     
     return input_costs, output_costs, total_costs
 
-def load_data(file_path=""): # Set path to data here
+def load_data(file_path="Data/20220704_student_answers_all_datasets.xlsx"): # Set path to data here
     """Load data from an Excel file."""
     return pd.read_excel(file_path)
 
@@ -87,10 +97,8 @@ def create_student_responses(grouped_data):
     
     # Looping through grouped data to fill student_responses
     for (Nummer, Klas, Tekstnaam), group in grouped_data:
-        
         # Setting unique ID, Class, and Text combination as Key
         student_text_key = f"{Nummer}_{Klas}_{Tekstnaam}"
-        
         # Saving Group as value in student_response
         student_responses[student_text_key] = group
     
@@ -152,10 +160,7 @@ def creating_comparison_df(responses, student_responses):
         else:
             row["Position Agreement"] = 0
         
-            
-
     return pd.DataFrame(rows) 
-
 
 def calculating_measures(comparison_df, ConMat_Field):
     # Calculating Measures for Extraction
@@ -167,119 +172,137 @@ def calculating_measures(comparison_df, ConMat_Field):
     
     ## Calculating Kappa
     ### Calculating observed and expeted proportions
-    p_o = (TP+TN)/(TP+FN+FP+TN)
+    p_o = (TP+TN)/(TP+FN+FP+TN) if (TP+FN+FP+TN) != 0 else 0
 
-    p_true = ((TP+FN)/(TP+FN+FP+TN))*((TP+FP)/(TP+FN+FP+TN))
-    p_false = ((FP+TN)/(TP+FN+FP+TN))*((FN+TN)/(TP+FN+FP+TN))
+    p_true = ((TP+FN)/(TP+FN+FP+TN))*((TP+FP)/(TP+FN+FP+TN)) if (TP+FN+FP+TN) != 0 else 0
+    p_false = ((FP+TN)/(TP+FN+FP+TN))*((FN+TN)/(TP+FN+FP+TN)) if (TP+FN+FP+TN) != 0 else 0
     p_e = p_true + p_false
 
-    k = (p_o-p_e)/(1-p_e)
+    k = (p_o-p_e)/(1-p_e) if (1-p_e) != 0 else 0
 
     ## Calculating Accuracy
-    Acc = (TP+TN)/(TP+FN+FP+TN)
+    Acc = (TP+TN)/(TP+FN+FP+TN) if (TP+FN+FP+TN) != 0 else 0
     
     ## Calculating Precision
-    Prec = (TP)/(TP+FP)
+    Prec = (TP)/(TP+FP) if (TP+FP) != 0 else 0
     
     ## Calculating Recall
-    Rec = (TP)/(TP+FN)
+    Rec = (TP)/(TP+FN) if (TP+FN) != 0 else 0
     
     ## Calculating F_1
-    F_1 = (2*(Prec*Rec))/(Prec+Rec)
+    F_1 = (2*(Prec*Rec))/(Prec+Rec) if (Prec+Rec) != 0 else 0
     
-    
-    # Calculating Accuracy for 
-
     return k, Acc, Prec, Rec, F_1, TP, FN, FP, TN
 
 
-"""Executing Code"""
-# Get filename for file to be processed and model name & number of diagrams for cost calc
-file_name = input("Please paste the name of the file you want to process:\n")
-llm_model = file_name.split("_")[-2:][0]
-n_diagrams = int(file_name.split("_")[-1:][0].replace(".jsonl", "").replace("n", ""))
+"""Executing Code (batch over folder)"""
 
-# Getting Batch Responses & tokens
-responses, input_tokens, output_tokens = load_batch_responses(file_name)
+# Discover all .jsonl files in the batch folder
+BATCH_DIR = "Batch Response Files"
+jsonl_paths = sorted(glob.glob(os.path.join(BATCH_DIR, "*.jsonl")))
 
-# Calculating Costs
-summed_input_tokens = token_sum(tokens=input_tokens)
-summed_output_tokens = token_sum(tokens=output_tokens)
-input_costs, output_costs, total_costs = cost_calc(input=summed_input_tokens, output=summed_output_tokens, model=llm_model)
+# Ensure output directory exists
+os.makedirs("documentation", exist_ok=True)
 
-# Loading & Filtering & Group Original Dataset to create student responses
+# Load and prepare the original dataset once (shared across files)
 data = load_data()
 filtered_data = filter_data(data)
-grouped_data = group_data(data = filtered_data)
+grouped_data = group_data(data=filtered_data)
 student_responses = create_student_responses(grouped_data=grouped_data)
 
-# Integrating originl student responses with llm codings
-comparison_df = creating_comparison_df(responses, student_responses)
+if not jsonl_paths:
+    print(f"No .jsonl files found in '{BATCH_DIR}'. Nothing to process.")
+else:
+    for jsonl_path in jsonl_paths:
+        file_name = os.path.basename(jsonl_path)
+        print(f"Processing: {file_name}")
 
+        # Extract model name and number of diagrams from file name
+        llm_model = file_name.split("_")[-2:][0]
+        n_diagrams = int(file_name.split("_")[-1:][0].replace(".jsonl", "").replace("n", ""))
 
-# Calculating Measures
-## For Extraction
-Kappa_Ext, Accuracy_Ext, Precision_Ext, Recall_Ext, F_1_Ext, TP_Ext, FN_Ext, FP_Ext, TN_Ext = calculating_measures(comparison_df=comparison_df, ConMat_Field="Extraction ConMat")
+        # Get Batch Responses & tokens
+        responses, input_tokens, output_tokens = load_batch_responses(file_name)
 
-## For Position
-### filtering Comparison DF to only include rows where human and AI agreed that extraction was correct
-position_DF = comparison_df[
-    (comparison_df["Code"] == "g") &
-    (comparison_df["Extraction Agreement"] == 1)
-]
+        # Calculating Costs
+        summed_input_tokens = token_sum(tokens=input_tokens)
+        summed_output_tokens = token_sum(tokens=output_tokens)
+        input_costs, output_costs, total_costs = cost_calc(input=summed_input_tokens, output=summed_output_tokens, model=llm_model)
 
-### Calculating Measures
-Kappa_Pos, Accuracy_Pos, Precision_Pos, Recall_Pos, F_1_Pos, TP_Pos, FN_Pos, FP_Pos, TN_Pos = calculating_measures(comparison_df=comparison_df, ConMat_Field="PositionCode ConMat")
+        # Integrating original student responses with llm codings
+        comparison_df = creating_comparison_df(responses, student_responses)
 
-# Preparing Measures DF to write it to documentation file
-measures_data = [
-    ("EXTRACTION DATA", ""),
-    ("Accuracy", round(Accuracy_Ext, 3)),
-    ("F_1", round(F_1_Ext, 3)),
-    ("Precision", round(Precision_Ext, 3)),
-    ("Recall", round(Recall_Ext, 3)),
-    ("ROC AUC", "N/A"),
-    ("Kappa H-H", "N/A"),
-    ("Kappa H-M", round(Kappa_Ext, 3)),
-    ("TP", TP_Ext),
-    ("FN", FN_Ext),
-    ("FP", FP_Ext),
-    ("TN", TN_Ext),
-    ("", ""),
-    ("POSITION DATA", ""),
-    ("Accuracy", round(Accuracy_Pos, 3)),
-    ("F_1", round(F_1_Pos, 3)),
-    ("Precision", round(Precision_Pos, 3)),
-    ("Recall", round(Recall_Pos, 3)),
-    ("ROC AUC", "N/A"),
-    ("Kappa H-H", "N/A"),
-    ("Kappa H-M", round(Kappa_Pos, 3)),
-    ("TP", TP_Pos),
-    ("FN", FN_Pos),
-    ("FP", FP_Pos),
-    ("TN", TN_Pos),
-    ("", ""),
-    ("COSTS", ""),
-    ("Input", round(input_costs, 3)),
-    ("Output", round(output_costs, 3)),
-    ("Total", round(total_costs, 3)),
-    ("Per Diagram", round(total_costs / n_diagrams, 4))
-]
+        # Calculating Measures
+        ## For Extraction
+        Kappa_Ext, Accuracy_Ext, Precision_Ext, Recall_Ext, F_1_Ext, TP_Ext, FN_Ext, FP_Ext, TN_Ext = calculating_measures(comparison_df=comparison_df, ConMat_Field="Extraction ConMat")
 
-# Create a DataFrame from the list of tuples
-measures_df = pd.DataFrame(measures_data, columns=["Measure", "Value"])
+        ## For Position
+        ### filtering Comparison DF to only include rows where human and AI agreed that extraction was correct
+        position_DF = comparison_df[
+            (comparison_df["Code"] == "g") &
+            (comparison_df["Extraction Agreement"] == 1)
+        ]
 
-# Reorder comparison_df for more logical variable order
-comparison_df = comparison_df[["Dataset", "UUID", "Veld", "Code", "LLM_Code", "Extraction Agreement", "Extraction ConMat", "Veldnummer", "Verbandnummer", "PositionCode", "LLM_PositionCode", "LLM_CorrectPosition","PositionCode Agreement","PositionCode ConMat", "Position Agreement"]]
+        ### Calculating Measures (kept exactly as in your original code)
+        Kappa_Pos, Accuracy_Pos, Precision_Pos, Recall_Pos, F_1_Pos, TP_Pos, FN_Pos, FP_Pos, TN_Pos = calculating_measures(comparison_df=comparison_df, ConMat_Field="PositionCode ConMat")
 
-with pd.ExcelWriter(f"documentation/{file_name}.xlsx", engine="xlsxwriter") as writer:
-    measures_df.to_excel(writer, sheet_name="Measures", index=False)
-    comparison_df.to_excel(writer, sheet_name="Data", index=False)
-    
-    workbook = writer.book
-    measures_sheet = writer.sheets["Measures"]
-    data_sheet = writer.sheets["Data"]
-    
-    measures_sheet.autofit()
-    data_sheet.autofit()
-    data_sheet.set_column("C:C", 80)
+        # Preparing Measures DF to write it to documentation file
+        measures_data = [
+            ("EXTRACTION DATA", ""),
+            ("Accuracy", round(Accuracy_Ext, 3)),
+            ("F_1", round(F_1_Ext, 3)),
+            ("Precision", round(Precision_Ext, 3)),
+            ("Recall", round(Recall_Ext, 3)),
+            ("ROC AUC", "N/A"),
+            ("Kappa H-H", "N/A"),
+            ("Kappa H-M", round(Kappa_Ext, 3)),
+            ("TP", TP_Ext),
+            ("FN", FN_Ext),
+            ("FP", FP_Ext),
+            ("TN", TN_Ext),
+            ("", ""),
+            ("POSITION DATA", ""),
+            ("Accuracy", round(Accuracy_Pos, 3)),
+            ("F_1", round(F_1_Pos, 3)),
+            ("Precision", round(Precision_Pos, 3)),
+            ("Recall", round(Recall_Pos, 3)),
+            ("ROC AUC", "N/A"),
+            ("Kappa H-H", "N/A"),
+            ("Kappa H-M", round(Kappa_Pos, 3)),
+            ("TP", TP_Pos),
+            ("FN", FN_Pos),
+            ("FP", FP_Pos),
+            ("TN", TN_Pos),
+            ("", ""),
+            ("COSTS", ""),
+            ("Input", round(input_costs, 3)),
+            ("Output", round(output_costs, 3)),
+            ("Total", round(total_costs, 3)),
+            ("Per Diagram", round(total_costs / n_diagrams, 4))
+        ]
+
+        # Create a DataFrame from the list of tuples
+        measures_df = pd.DataFrame(measures_data, columns=["Measure", "Value"])
+
+        # Reorder comparison_df for more logical variable order
+        comparison_df = comparison_df[[
+            "Dataset", "UUID", "Veld", "Code", "LLM_Code", "Extraction Agreement", "Extraction ConMat",
+            "Veldnummer", "Verbandnummer", "PositionCode", "LLM_PositionCode", "LLM_CorrectPosition",
+            "PositionCode Agreement","PositionCode ConMat", "Position Agreement"
+        ]]
+
+        # Write outputs per file
+        output_path = os.path.join("documentation", f"{file_name}.xlsx")
+        with pd.ExcelWriter(output_path, engine="xlsxwriter") as writer:
+            measures_df.to_excel(writer, sheet_name="Measures", index=False)
+            comparison_df.to_excel(writer, sheet_name="Data", index=False)
+            
+            workbook = writer.book
+            measures_sheet = writer.sheets["Measures"]
+            data_sheet = writer.sheets["Data"]
+            
+            measures_sheet.autofit()
+            data_sheet.autofit()
+            data_sheet.set_column("C:C", 80)
+
+        print(f"Wrote: {output_path}")

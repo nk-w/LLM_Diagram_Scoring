@@ -1,175 +1,95 @@
 # LLM-Based Coding of Student Causal Diagrams
 
-This repository contains code and resources from a study exploring the use of Large Language Models (LLMs) to code students' causal diagrams. The project evaluates how effectively LLMs can automate the coding process traditionally done by human researchers, comparing different prompting strategies and model configurations.
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
+![Study Status: Published](https://img.shields.io/badge/Study-Under_review-blue)
+![Python 3.10+](https://img.shields.io/badge/Python-3.10+-3776AB.svg?logo=python&logoColor=white)
+![R 4.3+](https://img.shields.io/badge/R-4.3+-276DC3.svg?logo=r&logoColor=white)
 
-## Project Overview
+Automated pipeline and Bayesian analysis toolbox for benchmarking LLM coding of student causal diagrams.
 
-Causal diagrams are visual representations that students create to demonstrate their understanding of cause-and-effect relationships in texts. Coding these diagrams is typically a manual, time-consuming process performed by researchers and teachers.
+## Executive Summary
 
-This project:
-- Evaluates how accurately LLMs can code student causal diagrams
-- Compares different prompting strategies and model configurations
-- Analyzes performance metrics for extraction and position coding
-- Provides cost analysis for different LLM implementations
+This project evaluates how Large Language Models (LLMs) code students' causal diagrams across prompting strategies, model families, and cost constraints. The repository bundles the full workflow: Python scripts orchestrate OpenAI batch runs, data wrangling, and metric reporting, while an embedded R/Quarto project (`r_analysis`) conducts Bayesian follow-up analyses and visualization.
 
-## Repository Structure
+- **Quick links**: [Python Workflow](#python-workflow) · [Data Governance](#data-governance) · [Result Artifacts](#result-artifacts) · [Embedded R Analysis](#embedded-r-analysis)
 
-The repository is organized as follows:
+### Workflow at a Glance
+1. Configure prompts, inputs, and batch jobs with the Python scripts in numerical order (`01_` → `06_`).
+2. Collect and reconcile OpenAI batch responses into structured metrics and schema-compliant JSONL files.
+3. Generate Excel dashboards summarizing accuracy, agreement, and cost for each strategy.
+4. Dive deeper inside `r_analysis` to fit Bayesian multilevel models, visualise effects, and export publication-ready tables/figures.
 
-- **Batch Input Files**: Contains JSONL files with batch requests to the OpenAI API
-- **Batch Response Files**: Stores the responses from the OpenAI batch API
-- **Data**: Contains the dataset of student causal diagrams
-- **Prompts**: Contains different prompting strategies for the LLMs
-- **Texts**: Contains the original texts students analyzed when creating diagrams
-- **documentation**: Stores analysis results and performance metrics
+## Repository Map
 
-## Key Scripts
+| Path | Purpose | Highlights |
+| --- | --- | --- |
+| `Batch Input Files/` | Generated JSONL payloads sent to the OpenAI Batch API | Output directory populated after runs (`Archive/` holds retired jobs) |
+| `Batch Response Files/` | Raw batch outputs returned by OpenAI | Empty until batches are retrieved; mirrors input naming inside `ARCHIVE/` |
+| `Data/` | Placeholder for source datasets of student diagram codings | We do not have the rights to share the data publicly, which is why it is not provided here |
+| `Texts/` | Texts students used when constructing diagrams | Plain-text Dutch articles (`Beton.txt`, `Suez.txt`, …) |
+| `Prompts/` | Prompt templates and notes for batch runs | Variants for truth inclusion, examples, and diagram creation |
+| `documentation/` | Derived Excel workbooks with metrics and comparisons | Holds documentation for each strategy |
+| `model_diagrams.json` | Canonical diagram representations consumed by prompts | Aligns Python pipeline with evaluation schema |
+| `response_schema_v0.1*.json` | Schemas validating batch responses | `_wDiagramCreation` variant captures extra diagram outputs |
+| `r_analysis/` | Self-contained R/Quarto project for Bayesian modelling | Scripts, Projet structure |
 
-The repository includes several Python scripts for analyzing and processing data:
+## Python Workflow
 
-- **batch_request.py**: Creates and submits batch requests to OpenAI
-- **batch_retrieve.py**: Downloads completed batch results
-- **batch_process.py**: Processes responses and calculates performance metrics
-- **explore_results.py**: Compares results across different settings
-- **explore_dataset.py**: Provides descriptive statistics about the dataset
+### Environment Setup
+- Install Python 3.10+ and create a virtual environment: `python -m venv .venv && source .venv/bin/activate` (macOS/Linux) or `.venv\Scripts\activate` (Windows).
+- Install dependencies: `pip install -r requirements.txt`.
+- Export your OpenAI API key via `export OPENAI_API_KEY=...` (or set in your shell profile / `.env`).
 
-## Prerequisites
+### Step-by-Step Pipeline
+1. `01_batch_request.py` – collect user choices (prompt variant, sample size, model) and build JSONL batch payloads in `Batch Input Files/`.
+2. `02_batch_retrieve.py` – monitor OpenAI batch jobs and download completed responses into `Batch Response Files/`.
+3. `03.1_batch_process.py` & `03.2_batch_process_loop.py` – parse responses, align them with human-coded ground truth, compute extraction/position metrics, and optionally loop over multiple files.
+4. `04_explore_dataset.py` – inspect dataset distributions and surface descriptive statistics prior to modelling.
+5. `05_explore_results.py` – optional, manual comparison notebook; populate the `settings` list before running to export custom Excel summaries to `documentation/`.
+6. `06_integrate_all_data_files.py` – merge processed outputs into a combined Excel in `documentation/`; follow with `r_analysis/scripts/01_cleaning_data.qmd` to rebuild `r_analysis/data/data_brms_analysis.xlsx`.
 
-Before using this code, you'll need:
+### Configuration Tips
+- Prompt variants live in `Prompts/`; update or add templates when experimenting with new instructions.
+- `model_diagrams.json` controls the canonical reference diagrams shown to models—maintain schema compatibility when editing.
+- Response validation is governed by `response_schema_v0.1*.json`; adjust these if you introduce new response fields.
+- Large batch runs benefit from organising completed JSONL files into the provided `Archive` folders to keep the workspace lean.
 
-- Python 3.8 or higher
-- An OpenAI API key with access to GPT-4o models
-- The following Python packages: pandas, numpy, openai, pydantic, json
+## Data Governance
+- Source data is excluded because we do not own the rights to publish this dataset. 
+- `Texts/*.txt` store the original reading passages. When adding new texts, keep filenames short and reference them consistently in your prompts and diagrams.
+- Generated artifacts in `Batch Input Files/`, `Batch Response Files/`, and `documentation/` are not provided because they contain (parts of) the dataset.
+- Derived datasets in `r_analysis/data/` are produced in two steps: `06_integrate_all_data_files.py` updates `combined_Data_with_strategy_and_model.xlsx`, and `r_analysis/scripts/01_cleaning_data.qmd` writes `data_brms_analysis.xlsx`.
 
-## Usage Guide
+## Result Artifacts
+- Each `.jsonl.xlsx` file in `documentation/` summarises a single strategy/model combination with a `Measures` sheet (metrics plus token cost rows) and a `Data` sheet containing row-level confusion-matrix fields.
+- Filenames follow `YYYY-MM-DD_Strategy_Model_ModelSize_nN.jsonl.xlsx`, matching the originating JSONL files for easy traceability.
+- The `ARCHIVE/` subfolder can store superseded outputs; keep only current analyses at the top level to simplify automation.
+- Visual summaries generated in `r_analysis/figures/` complement the Excel workbooks and can be embedded directly into manuscripts.
 
-### Step 1: Create and Submit Batch Requests
+## Embedded R Analysis
 
-Run the `batch_request.py` script to create a batch request:
+Treat `r_analysis/` as a dedicated RStudio/Quarto subproject.
 
-```bash
-python batch_request.py
-```
+### Setup
+- Required tooling: R 4.3+, Quarto CLI, and (optionally) RStudio. Install dependencies on first run by opening each `.qmd` file; the scripts auto-install needed packages (`tidyverse`, `brms`, `cmdstanr`, `bayesplot`, `posterior`, `emmeans`, `broom.mixed`, `performance`, `here`, `readxl`, `janitor`, `data.table`).
+- Ensure `cmdstanr` is configured (`cmdstanr::install_cmdstan()`); models depend on Stan backend availability.
+- Set the working directory via the provided project file `r_analysis.Rproj` for reliable `here::here()` paths.
 
-This script will:
-1. Ask you to select a prompting strategy from predefined settings
-2. Request the number of diagrams you want to analyze
-3. Ask you to choose an LLM model (GPT-4o or GPT-4o-mini)
-4. Create a JSONL file with the batch request in the "Batch Input Files" folder
-5. Optionally upload and submit the batch to OpenAI
+### Workflow
+1. `scripts/01_cleaning_data.qmd` – loads `data/combined_Data_with_strategy_and_model.xlsx`, cleans identifiers, and prepares analysis tables.
+2. `scripts/02_brms_analysis.qmd` – fits Bayesian multilevel models for extraction and position agreement, saving fitted draws to `models/` and generating posterior summaries.
+3. `scripts/03_descriptives.qmd` – produces descriptive tables and confusion-matrix summaries, exporting CSVs to `tables/`.
+4. `scripts/04_figures.qmd` – generates publication-ready figures from the saved BRMS fits in `models/`.
 
-Make sure to:
-- Add your OpenAI API key in the appropriate place in the script
-- Update the data file path in the script to point to your data file
+### Outputs
+- Figures (`figures/*.png`, `.zip`) include density overlays, forest plots, and heatmaps.
+- Tables (`tables/*.csv`) capture odds ratios, predicted probabilities, and observed metrics for easy import into LaTeX or Word.
+- Model objects (`models/*.rds`) are serialised fits suitable for further post-processing or simulation.
+- Logs land in `logs/` (currently placeholder `.gitkeep`), where you can configure knitr/Quarto to write build outputs if desired.
 
-### Step 2: Retrieve Batch Responses
+## Appendix
 
-Once your batch request has been processed by OpenAI, run:
-
-```bash
-python batch_retrieve.py
-```
-
-This script will:
-1. Connect to your OpenAI account and show your recent batch requests
-2. Display the status of each batch (active, completed, or failed)
-3. Allow you to select which completed batches to download
-4. Save the responses to the "Batch Response Files" folder
-
-### Step 3: Process and Analyze Results
-
-After retrieving the responses, analyze the results:
-
-```bash
-python batch_process.py
-```
-
-You'll be prompted to enter the name of the batch response file to process. The script will:
-1. Load the batch responses and the original human coding
-2. Compare the LLM's coding with the human coding
-3. Calculate performance metrics for both extraction and position coding:
-   - Accuracy, Precision, Recall, F1 score
-   - Cohen's kappa
-   - Confusion matrices (TP, FP, TN, FN)
-4. Calculate token usage and associated costs
-5. Generate an Excel file with the results in the "documentation" folder
-
-### Step 4: Compare Different Strategies
-
-To compare results across different settings:
-
-```bash
-python explore_results.py
-```
-
-Before running this script:
-- Edit the script to specify which result files to include in your analysis
-- Add the relevant file names to the `settings` list in the script
-
-The script will generate a comprehensive Excel file comparing all specified settings.
-
-## Understanding the Analysis
-
-### Coding Tasks
-
-The system evaluates two main coding tasks:
-
-1. **Extraction Coding**: Distinguishing between "g" ("good" for correct responses) and "c" ("commission" for errors of commission) elements in student diagrams
-2. **Position Coding**: Determining the correct positioning or relationships between elements
-
-### Prompting Strategies
-
-Various prompting strategies can be tested, including:
-
-- **With/Without Truth Values**: Whether to include ground truth in the model diagrams
-- **Number of Examples**: Varying from 0 to 50 examples in the prompt
-- **Diagram Creation**: Whether to include diagram creation instructions
-
-### Performance Metrics
-
-The analysis calculates several metrics:
-
-- **Accuracy**: Overall correctness of the LLM's coding
-- **Precision**: How many of the LLM's positive identifications were correct
-- **Recall**: How many actual positives were identified by the LLM
-- **F1 Score**: Harmonic mean of precision and recall
-- **Cohen's Kappa**: Agreement between human and LLM coding beyond chance
-
-### Cost Analysis
-
-The system tracks token usage and costs for different:
-- Model variants (e.g., GPT-4o vs. GPT-4o-mini)
-- Prompting strategies
-- Number of diagrams
-
-## Example Workflow
-
-A typical workflow might look like:
-
-1. Run `batch_request.py` and select "V1.1_woTruth_5Examples_allUserPrompt" as the strategy, 20 as the number of diagrams, and "gpt-4o-2024-08-06" as the model
-2. Wait for the batch to complete (this may take several minutes to hours)
-3. Run `batch_retrieve.py` and select the completed batch to download
-4. Run `batch_process.py` and enter the batch file name to analyze the results
-5. Review the Excel file in the "documentation" folder to see the performance metrics
-6. Repeat with different strategies or models to compare performance
-7. Use `explore_results.py` to create a comprehensive comparison
-
-## Modifying the Code
-
-If you need to adapt this code for your own dataset:
-- Update the data loading and filtering functions in each script
-- Modify the data structure in model_diagrams.json to match your diagram format
-- Adjust the prompts in the "Prompts" folder to fit your specific coding task
-
-## License
-
-See the LICENSE file for license information for this project
-
-
-## Contact
-
-niklas.wenzel@maastrichtuniversity.nl
-
----
-
-*Note: This repository is part of a research study on using LLMs for coding student work. For more information about the research methodology and findings, please refer to the associated publication.*
+- **Citation**: Wenzel, N. (2025). *LLM-Based Coding of Student Causal Diagrams*. Research dataset and code. https://github.com/niklaswenzel/LLM_Diagram_Coding
+- **Contact**: niklas.wenzel@maastrichtuniversity.nl
+- **License**: MIT License (see `LICENSE`).
+- **Glossary**: `Extraction` – binary coding of correct concept identification; `Position` – relational accuracy among diagram elements; `Strategy` – prompt configuration (truth values/examples); `Model` – OpenAI model variant (e.g., `gpt-5`, `gpt-5-mini`).

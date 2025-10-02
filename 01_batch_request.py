@@ -61,7 +61,8 @@ def create_student_responses(grouped_data):
         
 def choose_settings():
     # Defining potential settings to test
-    settings = { 
+    settings = {
+        # S1: Model Given = No, Model Created = No, Examples = 0
         "V1.1_woTruth_0Examples_allUserPrompt": {
             "Prompt": "base_prompt.txt",
             "User_Prompt": "prompt_v1.1_woTruth_allUserPrompt.txt",
@@ -70,6 +71,8 @@ def choose_settings():
             "Examples": 0,
             "Schema": "response_schema_v0.1.json"
         },
+
+        # S2: Model Given = No, Model Created = No, Examples = 5
         "V1.1_woTruth_5Examples_allUserPrompt": {
             "Prompt": "base_prompt.txt",
             "User_Prompt": "prompt_v1.1_woTruth_allUserPrompt.txt",
@@ -78,22 +81,18 @@ def choose_settings():
             "Examples": 5,
             "Schema": "response_schema_v0.1.json"
         },
-        "V1.1_woTruth_20Examples_allUserPrompt": {
+
+        # S3: Model Given = No, Model Created = No, Examples = 25
+        "V1.1_woTruth_25Examples_allUserPrompt": {
             "Prompt": "base_prompt.txt",
             "User_Prompt": "prompt_v1.1_woTruth_allUserPrompt.txt",
             "Notes": "prompt_v1.1_woTruth_allUserPrompt_NOTES.txt",
             "Truth": False,
-            "Examples": 20,
+            "Examples": 25,
             "Schema": "response_schema_v0.1.json"
         },
-        "V1.1_woTruth_50Examples_allUserPrompt": {
-            "Prompt": "base_prompt.txt",
-            "User_Prompt": "prompt_v1.1_woTruth_allUserPrompt.txt",
-            "Notes": "prompt_v1.1_woTruth_allUserPrompt_NOTES.txt",
-            "Truth": False,
-            "Examples": 50,
-            "Schema": "response_schema_v0.1.json"
-        },
+
+        # S4: Model Given = Yes, Model Created = No, Examples = 0
         "V1.1_wTruth_0Examples_allUserPrompt": {
             "Prompt": "base_prompt.txt",
             "User_Prompt": "prompt_v1.1_wTruth_allUserPrompt.txt",
@@ -102,6 +101,8 @@ def choose_settings():
             "Examples": 0,
             "Schema": "response_schema_v0.1.json"
         },
+
+        # S5: Model Given = Yes, Model Created = No, Examples = 5
         "V1.1_wTruth_5Examples_allUserPrompt": {
             "Prompt": "base_prompt.txt",
             "User_Prompt": "prompt_v1.1_wTruth_allUserPrompt.txt",
@@ -110,6 +111,18 @@ def choose_settings():
             "Examples": 5,
             "Schema": "response_schema_v0.1.json"
         },
+
+        # S6: Model Given = Yes, Model Created = No, Examples = 25
+        "V1.1_wTruth_25Examples_allUserPrompt": {
+            "Prompt": "base_prompt.txt",
+            "User_Prompt": "prompt_v1.1_wTruth_allUserPrompt.txt",
+            "Notes": "prompt_v1.1_woTruth_allUserPrompt_NOTES.txt",
+            "Truth": True,
+            "Examples": 25,
+            "Schema": "response_schema_v0.1.json"
+        },
+
+        # S7: Model Given = No, Model Created = Yes, Examples = 0
         "V1.1_woTruth_0Examples_allUserPrompt_wDiagramCreation": {
             "Prompt": "base_prompt.txt",
             "User_Prompt": "prompt_v1.1_woTruth_allUserPrompt.txt",
@@ -118,6 +131,8 @@ def choose_settings():
             "Examples": 0,
             "Schema": "response_schema_v0.1_wDiagramCreation.json"
         },
+
+        # S8: Model Given = No, Model Created = Yes, Examples = 5
         "V1.1_woTruth_5Examples_allUserPrompt_wDiagramCreation": {
             "Prompt": "base_prompt.txt",
             "User_Prompt": "prompt_v1.1_woTruth_allUserPrompt.txt",
@@ -126,15 +141,18 @@ def choose_settings():
             "Examples": 5,
             "Schema": "response_schema_v0.1_wDiagramCreation.json"
         },
-        "V1.1_wTruth_5Examples_allUserPrompt_wDiagramCreation": {
+
+        # S9: Model Given = No, Model Created = Yes, Examples = 25
+        "V1.1_woTruth_25Examples_allUserPrompt_wDiagramCreation": {
             "Prompt": "base_prompt.txt",
-            "User_Prompt": "prompt_v1.1_wTruth_allUserPrompt.txt",
+            "User_Prompt": "prompt_v1.1_woTruth_allUserPrompt.txt",
             "Notes": "prompt_v1.1_woTruth_allUserPrompt_NOTES.txt",
-            "Truth": True,
-            "Examples": 5,
+            "Truth": False,
+            "Examples": 25,
             "Schema": "response_schema_v0.1_wDiagramCreation.json"
         }
     }
+
 
     for idx, (key, value) in enumerate(settings.items()):
         print(f"{idx}: {key}")
@@ -162,7 +180,8 @@ def choose_settings():
     return list(settings.items())[value]
 
 def choose_model():
-    models = ["gpt-4o-2024-08-06", "gpt-4o-mini-2024-07-18"]
+    # ADDED: gpt-5 and gpt-5-mini to the options
+    models = ["gpt-5", "gpt-5-mini", "gpt-4o-2024-08-06", "o4-mini-2025-04-16"]
 
     for idx, model in enumerate(models):
         print(f"{idx}: {model}")
@@ -172,6 +191,10 @@ def choose_model():
     model = models[model_idx]
     print()
     return model
+
+def is_reasoning_model(model: str) -> bool:
+    # UPDATED: treat GPT-5 family as reasoning models, alongside o1/o3/o4
+    return model.startswith(("o1", "o3", "o4", "gpt-5"))
 
 def select_random_responses(student_responses, n=1):
     """Select n random items from student responses."""
@@ -212,7 +235,6 @@ def building_model_diagram(model_diagrams, text_name, setting, response):
 
 def get_examples(key, filtered_data, setting, text_name, model_diagrams):
     # Creating a df for potential examples to draw (by filtering out the diagrams selected for evaluation)
-    #diagrams_to_exclude = [diagram for diagram in selected_diagrams]
     example_df = filtered_data[
         (~filtered_data["UUID"].str.contains(key, case=False, na=False, regex=False)) & # this removes the diagram that is currently prepared from the list of potential examples
         (filtered_data["Tekstnaam"]==text_name) # this makes sure that we are only getting examples of the same text as the target diagram
@@ -240,23 +262,23 @@ def get_examples(key, filtered_data, setting, text_name, model_diagrams):
         for idx, row in selected_response.iterrows():
             
             ### Getting human code from example
-            model_response[f"Box_{row["Veldnummer"]}"]["Extraction"] = row["Code"]
+            model_response[f'Box_{row["Veldnummer"]}']['Extraction'] = row["Code"]
 
             ### Applying Position code to model response
             if row["Code"] == "c":
-                model_response[f"Box_{row["Veldnummer"]}"]["Position"] = 2
+                model_response[f'Box_{row["Veldnummer"]}']["Position"] = 2
             
             elif row["Veldnummer"] == row["Verbandnummer"]:
-                model_response[f"Box_{row["Veldnummer"]}"]["Position"] = 1
+                model_response[f'Box_{row["Veldnummer"]}']["Position"] = 1
             
             elif row["Veldnummer"] != row["Verbandnummer"]:
-                model_response[f"Box_{row["Veldnummer"]}"]["Position"] = 0
+                model_response[f'Box_{row["Veldnummer"]}']["Position"] = 0
             
             else:
                 print(f"Something must have gone wrong in extracting the Position of {idx, row}")
             
             ### Applying Correct Position to Model Response
-            model_response[f"Box_{row["Veldnummer"]}"]["Correct Position"] = row["Verbandnummer"]
+            model_response[f'Box_{row["Veldnummer"]}']["Correct Position"] = row["Verbandnummer"]
             
         for i in range(1, 5):
             if model_response[f"Box_{i}"]["Extraction"] == None:
@@ -291,26 +313,34 @@ def create_examples_for_prompt(model_inputs, model_responses):
 
     return prompt_examples
 
-def prep_batch(system_prompt, user_prompt, response_schema, key, model):
-    """A function that creates the batch request for the current diragram"""
-    
+def prep_batch(system_prompt, user_prompt, response_schema, key, model, reasoning_effort=None):
+    """Create the batch request for the current diagram, adapting to reasoning vs standard models."""
+    # Base body shared by both models
+    body = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": f"{system_prompt}"},
+            {"role": "user", "content": f"{user_prompt}"}
+        ],
+        "seed": 1234567,              # keep your deterministic setting
+        "response_format": response_schema
+    }
+
+    if is_reasoning_model(model):
+        # Reasoning models: add effort and omit temperature
+        body["reasoning_effort"] = reasoning_effort or "medium"
+    else:
+        # Non-reasoning models: keep your temperature setting
+        body["temperature"] = 0
+
     batch_request = {
         "custom_id": f"request-{key}",
         "method": "POST",
         "url": "/v1/chat/completions",
-        "body": {
-            "model": model,
-            "messages": [
-                {"role": "system", "content": f"{system_prompt}"},
-                {"role": "user", "content": f"{user_prompt}"}
-            ],
-            "temperature": 0,
-            "seed": 1234567,
-            "response_format": response_schema
-        }
+        "body": body
     }
-    
     return batch_request
+
 
 def processing_responses(selected_diagrams):
     """This function puts together the user prompt and calls GPT for each selected diagram"""
@@ -343,7 +373,8 @@ def processing_responses(selected_diagrams):
                 instructions = load_prompt(setting[1]["User_Prompt"])
                 notes = load_prompt(setting[1]["Notes"])
                 
-                user_prompt = instructions + "\n\n + "f"# Original Text\n{text}\n\n" + input_for_prompt + "\n\n" + examples_for_prompt + "\n\n" + notes
+                # FIXED: removed stray ' + ' inside string concatenation
+                user_prompt = instructions + "\n\n" + f"# Original Text\n{text}\n\n" + input_for_prompt + "\n\n" + examples_for_prompt + "\n\n" + notes
             else:
                 user_prompt = f"# Original Text\n{text}\n\n" + input_for_prompt + "\n\n" + examples_for_prompt
         
@@ -352,13 +383,14 @@ def processing_responses(selected_diagrams):
                 instructions = load_prompt(setting[1]["User_Prompt"])
                 notes = load_prompt(setting[1]["Notes"])
                 
-                user_prompt = instructions + "\n\n + "f"# Original Text\n{text}\n\n" + input_for_prompt + "\n\n" + notes
+                # FIXED: removed stray ' + ' inside string concatenation
+                user_prompt = instructions + "\n\n" + f"# Original Text\n{text}\n\n" + input_for_prompt + "\n\n" + notes
             else:
                 user_prompt = f"# Original Text\n{text}\n\n" + input_for_prompt
         
         
         # Creating Batch Request for current response (diagram)
-        request = prep_batch(system_prompt, user_prompt, response_schema, key, model)
+        request = prep_batch(system_prompt, user_prompt, response_schema, key, model, reasoning_effort)
         batch_requests.append(request)
     
     return batch_requests
@@ -395,7 +427,7 @@ client = OpenAI(
 )
 
 # Loading data and creating a filtered dataset
-file_path = "path/to/data" # Exchange with the true path to data here
+file_path = "Data/20220704_student_answers_all_datasets.xlsx" # Exchange with the true path to data here
 data_raw = load_data(file_path)
 filtered_data = filter_data(data_raw)
 
@@ -408,6 +440,11 @@ setting = choose_settings()
 n = int(input("How many diagrams do you want to evaluate\n"))
 model = choose_model()
 
+# Ask for effort whenever a reasoning model is chosen (o-series or gpt-5 family).
+reasoning_effort = None
+if is_reasoning_model(model):
+    _eff = (input("Reasoning effort (low|medium|high) [medium]:\n") or "medium").strip().lower()
+    reasoning_effort = _eff if _eff in ("low", "medium", "high") else "medium"
 
 # Selecting correct System Prompt & Response Schema
 system_prompt = load_prompt(setting[1]["Prompt"])

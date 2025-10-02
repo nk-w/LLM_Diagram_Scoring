@@ -6,7 +6,7 @@ from openai import OpenAI
 ####################
 """Defining Functions"""
 
-def get_batches(client, limit=10):
+def get_batches(client, limit=25):
     """A function that allows the user to select which batch to download"""
     # Get batches
     print("\n####################\n")
@@ -91,7 +91,7 @@ client = OpenAI(
 )
 
 # Retrieving top n batches and split into active and completed batches
-batches = get_batches(client, limit = 5)
+batches = get_batches(client, limit = 25)
 
 """
 for idx, batch in enumerate(batches):
